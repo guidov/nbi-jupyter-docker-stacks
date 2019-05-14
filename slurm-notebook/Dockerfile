@@ -1,5 +1,5 @@
 FROM nielsbohr/base-notebook:latest
-MAINTAINER Rasmus Munk <rasmus.munk@nbi.ku.dk>
+LABEL MAINTAINER="Rasmus Munk <rasmus.munk@nbi.ku.dk>"
 
 ARG SLURM_VERSION=18.08.4
 ARG SLURM_DOWNLOAD_MD5=75c76328159def203133505def7a99a6
@@ -10,7 +10,8 @@ USER root
 RUN groupadd -r slurm --gid=990 && useradd -r -g slurm --uid=990 slurm \
     && groupadd -r munge --gid=993 && useradd -r -g munge --uid=997 munge
 
-# Dep
+# Dependencies
+# build, slurm, openmpi, ldap
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     build-essential \
@@ -25,6 +26,9 @@ RUN apt-get update \
     libopenmpi-dev \
     openmpi-bin \
     openmpi-common \
+    libnss-ldap \
+    libpam-ldap \
+    ldap-utils \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -57,7 +61,8 @@ USER $NB_USER
 RUN conda create -n cling \
     && conda install xeus-cling -n cling -c conda-forge \
     && conda clean -tipsy \
-    && fix-permissions $CONDA_DIR
+    && fix-permissions $CONDA_DIR \
+    && fix-permissions /home/$NB_USER
 
 ENV CXX_PATH=$CONDA_DIR/envs/cling
 RUN cp -R $CXX_PATH/share/jupyter/kernels/* $CONDA_DIR/share/jupyter/kernels/
@@ -72,10 +77,10 @@ RUN mkdir -p /var/log/supervisord /var/run/supervisord \
     && chmod 775 /var/run/supervisord
 
 COPY supervisord.conf /etc/supervisor/supervisord.conf
-COPY setup_env.sh /usr/local/bin/setup_env.sh
 RUN chown $NB_USER:$NB_GID /etc/supervisor/supervisord.conf \
-    && chmod 775 /etc/supervisor/supervisord.conf \
-    && chown $NB_USER:$NB_GID /usr/local/bin/setup_env.sh \
-    && chmod +x /usr/local/bin/setup_env.sh
+    && chmod 775 /etc/supervisor/supervisord.conf
 
+# As an exception, run as root,
+# Remember to use supervisord start-notebook.sh to
+# de-escalate privileges to $NB_UID:$NB_GID
 CMD ["/usr/bin/supervisord"]

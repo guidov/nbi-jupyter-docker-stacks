@@ -1,26 +1,8 @@
 FROM nielsbohr/python-notebook:latest
 LABEL MAINTAINER="Rasmus Munk <rasmus.munk@nbi.ku.dk>"
 
-USER root
-
-# For GDAL
-RUN apt-get update \
-    && apt-get install -yq --no-install-recommends \
-    g++ \
-    software-properties-common \
-    nano vim git \
-    && add-apt-repository -y ppa:ubuntugis/ubuntugis-unstable \
-    && apt-get update \
-    && apt-get install -yq --no-install-recommends \
-    gdal-bin \
-    libgdal-dev \
-    && add-apt-repository --remove ppa:ubuntugis/ubuntugis-unstable \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
 USER $NB_USER
-
-# Use conda since several geo packages
+# Python2: use conda since several geo packages are only packaged there
 RUN conda install -n python2 \
     appmode \
     arrow \
@@ -40,7 +22,7 @@ RUN conda install -n python2 \
     geoviews \
     graphviz \
     gsw \
-    GDAL==2.3.3 \
+    GDAL \
     hvplot \
     intake::intake \
     intake::intake-xarray \
@@ -68,14 +50,15 @@ RUN conda install -n python2 \
     xesmf \
     zarr \
     zict \
+    rasterio \
+    cdo \
+    ncl \
+    nco \
     && conda clean -tipsy \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
 
-# RUN conda-env remove -n python3 && \
-#     conda create -n python3 python=3.6 ipykernel
-
-# Use conda since several geo packages
+# Python3: use conda since several geo packages are only packaged there
 RUN conda install -n python3 \
     appmode \
     arrow \
@@ -102,7 +85,7 @@ RUN conda install -n python3 \
     geoviews \
     graphviz \
     gsw \
-    GDAL==2.3.3 \
+    GDAL \
     hvplot \
     intake::intake \
     intake::intake-xarray \
@@ -138,20 +121,19 @@ RUN conda install -n python3 \
     xesmf \
     zarr \
     zict \
+    rasterio \
+    cdo \
+    ncl \
+    nco \
     && conda clean -tipsy \
     && fix-permissions $CONDA_DIR \
     && fix-permissions /home/$NB_USER
 
+# Finally install any remaining packages with pip
 RUN $PYTHON3_PATH/bin/pip install \
-    schemdraw
-
-RUN jupyter labextension install @jupyter-widgets/jupyterlab-manager \
-                                     @jupyterlab/hub-extension \
-                                     @pyviz/jupyterlab_pyviz \
-                                     jupyter-leaflet \
-                                     jupyterlab_bokeh \
-                                     dask-labextension \
-				     jupyterlab-server-proxy
+    schemdraw \
+    && fix-permissions $CONDA_DIR \
+    && fix-permissions /home/$NB_USER
 
 # Run container as
 USER $NB_USER

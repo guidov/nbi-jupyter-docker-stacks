@@ -9,6 +9,7 @@ RUN apt-get update \
     pkg-config \
     build-essential \
     libgl1-mesa-glx \
+    gmsh \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -17,4 +18,24 @@ USER $NB_USER
 ENV LD_LIBRARY_PATH=/opt/conda/lib
 ENV PKG_CONFIG_PATH=/opt/conda/envs/python3/lib/pkgconfig
 
-RUN conda install --name python3 -c conda-forge fenics gmsh
+RUN conda install -c conda-forge -n python2 \
+    fenics \
+    && conda clean -tipsy \
+    && fix-permissions $CONDA_DIR \
+    && fix-permissions /home/$NB_USER
+
+RUN conda install -c conda-forge -n python3 \
+    fenics \
+    && conda clean -tipsy \
+    && fix-permissions $CONDA_DIR \
+    && fix-permissions /home/$NB_USER
+
+RUN $PYTHON2_PATH/bin/pip install \
+    pygmsh \
+    && fix-permissions $CONDA_DIR \
+    && fix-permissions /home/$NB_USER
+
+RUN $PYTHON3_PATH/bin/pip install \
+    pygmsh \
+    && fix-permissions $CONDA_DIR \
+    && fix-permissions /home/$NB_USER
